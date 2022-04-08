@@ -1,7 +1,6 @@
-import datetime
 import time
 from chinese_calendar import is_workday
-from datetime import datetime
+import datetime
 # import requests
 import wencai as wc
 from pandas import DataFrame
@@ -20,7 +19,10 @@ def write_to_mysql(df,type,date):
     dateArray = time.strptime(date,time_format)
     date = time.mktime(dateArray)
 
-    df.drop(columns=['总股本','收盘价创新高(条件说明)','最新dde大单净额'],inplace=True)
+    if type == '15日均线':
+        df.drop(columns=['总股本', '均线(条件说明)', '最新dde大单净额','技术形态','买入信号inter'], inplace=True)
+    if type == '60日新高':
+        df.drop(columns=['总股本','收盘价创新高(条件说明)','最新dde大单净额'],inplace=True)
     df.rename(columns=engToCnDict,inplace=True)
     df['date'] = date
     df['created_on'] = int(time.time())
@@ -41,6 +43,7 @@ def test_query(type,date):
         query = '收盘价上穿15日均线；所属同花顺行业；市值；流通市值'+date
         r = wc.search(query)
         df = DataFrame(r)
+        # print(df)
         write_to_mysql(df,'15日均线',date)
     # df.to_excel(query + '.xlsx')
     # print(r, '--')
@@ -56,7 +59,7 @@ def get_range_date(startStr,endStr):
             list.append(start.strftime(time_format))
     return list
 
-def is_trading_day(date):
+def is_trading_day(dateStr):
     # # url = 'http://tool.bitefu.net/jiari/?d=' + query_date
     # # 上面的url接口  工作日对应结果为 0, 休息日对应结果为 1, 节假日对应的结果为 2；
     # # url = 'http://www.easybots.cn/api/holiday.php?d=' + query_date  需要实名认证
@@ -68,6 +71,7 @@ def is_trading_day(date):
     # # {"code":10000,"data":0}
     # # 返回数据：正常工作日对应结果为 0, 法定节假日对应结果为 1, 节假日调休补班对应的结果为 2，休息日对应结果为 3
     # return content['data'] == 0
+    date = datetime.datetime.strptime(dateStr,time_format)
     if is_workday(date):
         if date.isoweekday() < 6:
             return True
@@ -77,7 +81,9 @@ def get_range_data(startStr,endStr):
     list = get_range_date(startStr,endStr)
     for day in list:
         test_query('60日新高', day)
+        time.sleep(5)
 
 if __name__ == '__main__':
-    get_range_data('2019-12-1','2022-2-6')
+    get_range_data('2019-12-1','2022-4-6')
+    # print(get_range_date('2021-09-15','2022-2-6'))
 
